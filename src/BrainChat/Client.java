@@ -1,5 +1,4 @@
 package BrainChat;
-
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -8,26 +7,12 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 
-/**
- * Communicate with other clients by saving itself in the "RMI register", 
- * save states (messages and name) on the server with the "Linker",
- * and update the GUI. 
- */
 public interface Client extends Remote
 {
-    /**
-     * Display the message sent by "sender" at time "time". Called by other client.
-     */
     void writeMessage(String time, String sender, String message) throws RemoteException;
 
-    /**
-     * Notify that the user "name" is disconnected. Called by other client.
-     */
     void notifyDisconnected(String name) throws RemoteException;
 
-    /**
-     * Notify that the user "name" is connected. Called by other client.
-     */
     void notifyConnected(String name) throws RemoteException;
 
 
@@ -35,34 +20,23 @@ public interface Client extends Remote
     {
         private static final long serialVersionUID = 4885573965833413193L;
 
-        // Current user state.
         private boolean mIsConnected;
         private String mName;
-        // Remoted objects.
         private Registry mRegistry;
         private Linker mLinker;
-        // To print messages and connected users.
         private Application mApp; 
 
         public BasicClient(String host)
         {
             mIsConnected = false;
-            // Get server objects.
             getRemotedObjects(host);
         }
 
-        /**
-         * Bind this client with the current running gui, to print the messages 
-         * and connected users.
-         */
         public void bindWithGUI(Application app)
         {
             mApp = app;
         }
 
-        /**
-         * Connect the user to the server, and return true if successful.
-         */
         public boolean connect(String name)
         {
             mApp.addToChat("[Server]: Initiating your connection...",
@@ -70,7 +44,6 @@ public interface Client extends Remote
 
             try 
             {
-                // Try to create the user with the pseudo on the server side.
                 if (! mLinker.connect(name))
                 {
                     mApp.addToChat("[Server]: Error, this pseudo is not available.", 
@@ -87,7 +60,6 @@ public interface Client extends Remote
 
             try
             {
-                // Add this client to the registry.
                 Client this_stub = (Client) 
                     UnicastRemoteObject.exportObject(this, 0);
                 mRegistry.rebind("rmi://client/" + name, this_stub); 
@@ -111,9 +83,6 @@ public interface Client extends Remote
             return true;
         }
 
-        /**
-         * Disconnect the user of the server by releasing her/his pseudo.
-         */
         public void disconnect()
         {
             mApp.addToChat("[Server]: Initiating your disconnection...",
@@ -121,7 +90,6 @@ public interface Client extends Remote
 
             try
             {
-                // Try to unbind the user on the server side.
                 mRegistry.unbind("rmi://client/" + mName);
                 UnicastRemoteObject.unexportObject(this, true);
                 mLinker.disconnect(mName);
@@ -135,23 +103,17 @@ public interface Client extends Remote
             }
 
             spreadDisconnection();
-            // Remove the connected users.
             mApp.clearUsersList();  
 
             mApp.addToChat("[Server]: Disconnection finished.",
                     Application.ATTR_SERVER); 
         }
 
-        /**
-         * Send the user message.
-         */
         public void sendMessage(String message)
         {
             try 
             {
-                // Save this message on the server.
                 String time = mLinker.addMessage(mName, message);
-                // Spread this message to every client (including herself/himself).
                 mLinker.getClientNames().forEach(
                         s -> 
                         {
@@ -175,9 +137,6 @@ public interface Client extends Remote
             }
         }
 
-        /**
-         * Load every remoted object reference from the server into memory.
-         */
         private void getRemotedObjects(String host)
         {
             try 
@@ -189,15 +148,10 @@ public interface Client extends Remote
             {
                 mApp.addToChat("[Server]: Error with the server, please " + 
                         "relaunch the app.", Application.ATTR_ERROR);
-                // Can't continue without them.
                 System.exit(-1);
             }
         }
 
-        /**
-         * Spread the user connection to every other client (and herself/himself)
-         * and populate the connected users list.
-         */
         private void spreadConnection()
         {
             try 
@@ -207,10 +161,8 @@ public interface Client extends Remote
                         {
                             try 
                             {
-                                // Notify.
                                 Client client = (Client) mRegistry.lookup("rmi://client/" + s);
                                 client.notifyConnected(mName);
-                                // Populate.
                                 if (! s.equals(mName))
                                 {
                                     mApp.addToUsersList(s);
@@ -232,10 +184,6 @@ public interface Client extends Remote
         }
 
 
-        /**
-         * Spread the user disconnection to every other client (and herself/himself)
-         * and populate the connected users list.
-         */
         private void spreadDisconnection()
         {
             try 
@@ -265,9 +213,6 @@ public interface Client extends Remote
             }
         }
 
-        /**
-         * Fetch the message history.
-         */
         private void retrieveMessages()
         {
             mApp.addToChat("[Server]: Recovering message history...",

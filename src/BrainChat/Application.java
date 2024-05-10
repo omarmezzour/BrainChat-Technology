@@ -400,15 +400,12 @@ public class Application
     {
         return e -> 
         {
-            // Ask for confirmation.
-            // Build a pop up dialog:
             int input = JOptionPane.showConfirmDialog(mFrame,
                     "Click ok if you want to log out.", "Disconnect", 
                     JOptionPane.DEFAULT_OPTION);
 
             if (input == 0)
             {
-                // Disconnect on server.
                 mClient.disconnect();
                 connectButton.setEnabled(true);
                 disconnectButton.setEnabled(false);
